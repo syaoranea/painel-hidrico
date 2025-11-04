@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST="{\"components\\\\dashboard-layout-client.tsx -> @/components/dashboard-navbar\":{\"id\":\"components\\\\dashboard-layout-client.tsx -> @/components/dashboard-navbar\",\"files\":[\"static/chunks/_app-pages-browser_components_dashboard-navbar_tsx.js\"]}}"
