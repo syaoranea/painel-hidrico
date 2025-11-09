@@ -9,10 +9,12 @@ import { Clock, Droplet, Activity, Trash2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { useSession } from 'next-auth/react'
 
 interface ActivityRecord {
   id: string
   type: 'water' | 'urine'
+  tipoLiquido: string
   amount?: number
   frequency?: number
   volume?: number
@@ -28,6 +30,7 @@ export function RecentActivity({ onRefresh }: RecentActivityProps) {
   const [activities, setActivities] = useState<ActivityRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  
 
   const fetchActivities = async () => {
     try {
@@ -48,35 +51,37 @@ export function RecentActivity({ onRefresh }: RecentActivityProps) {
     fetchActivities()
   }, [])
 
-  const handleDelete = async (id: string, type: 'water' | 'urine') => {
-    setDeletingId(id)
-    
-    try {
-      const endpoint = type === 'water' ? '/api/water-intake' : '/api/urine-record'
-      const response = await fetch(`${endpoint}/${id}`, {
-        method: 'DELETE'
-      })
+const handleDelete = async (id: string, type: 'water' | 'urine') => {
+  setDeletingId(id);
 
-      if (response.ok) {
-        setActivities(activities?.filter(activity => activity.id !== id) || [])
-        toast.success('Registro excluído com sucesso!')
-        onRefresh?.()
-      } else {
-        toast.error('Erro ao excluir registro')
-      }
-    } catch (error) {
-      toast.error('Erro ao excluir registro')
-    } finally {
-      setDeletingId(null)
+  try {
+    const response = await fetch(`/api/activities/recent?id=${encodeURIComponent(id)}&type=${type}`, {
+      method: 'DELETE',
+    });
+
+    if (response.ok) {
+      toast.success('Registro excluído com sucesso!');
+      setActivities((prev) => prev?.filter((a) => a.id !== id) || []);
+      onRefresh?.();
+    } else {
+      toast.error('Erro ao excluir registro');
     }
+  } catch (error) {
+    console.error('Erro ao excluir registro:', error);
+    toast.error('Erro ao excluir registro');
+  } finally {
+    setDeletingId(null);
   }
+};
+
+
 
   const formatActivity = (activity: ActivityRecord) => {
     if (activity.type === 'water') {
       return {
         icon: <Droplet className="h-4 w-4 text-blue-600" />,
-        title: `${activity.amount}ml de água`,
-        subtitle: activity.notes || 'Consumo de água',
+        title: `${activity.amount}ml de ${activity.tipoLiquido}`,
+        subtitle: activity.notes || `Consumo de ${activity.tipoLiquido}`,
         color: 'text-blue-600'
       }
     } else {

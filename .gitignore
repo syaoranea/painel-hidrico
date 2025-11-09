@@ -1,5 +1,16 @@
-# Logs
-logs
+# ==========================
+# 📦 Node.js / Next.js
+# ==========================
+node_modules/
+.next/
+dist/
+dist-ssr/
+*.local
+
+# ==========================
+# ⚙️ Logs e depuração
+# ==========================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,20 +18,46 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-next
-dist
-dist-ssr
-*.local
+# ==========================
+# ⚙️ Build outputs e caches
+# ==========================
+.cache/
+out/
+coverage/
+build/
+tmp/
+temp/
 
-# Editor directories and files
+# ==========================
+# 🔐 Variáveis de ambiente
+# ==========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ==========================
+# 💻 IDEs e sistemas
+# ==========================
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-.env
+
+# ==========================
+# 🧪 TypeScript
+# ==========================
+*.tsbuildinfo
+
+# ==========================
+# 🪣 Outros
+# ==========================
+*.bak
+*.tmp
+

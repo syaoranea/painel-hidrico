@@ -39,7 +39,7 @@ export async function GET(request: Request) {
 
     // 🔹 Busca os dados no backend Java
     const [controleRes, urinaRes] = await Promise.all([
-      fetch(`${API_CONTROLE_URL}/${userId}?limit=100`),
+      fetch(`${API_CONTROLE_URL}/${userId}?limit=200`),
       fetch(`${API_URINA_URL}/${userId}/urina?limit=100`)
     ])
 

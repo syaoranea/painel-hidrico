@@ -8,8 +8,6 @@ export async function GET() {
   console.log('entrou')
   try {
     
-    
-
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
@@ -18,10 +16,11 @@ export async function GET() {
 
     const userId = session.user.id
     console.log(userId)
+    const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
 
     // 1️⃣ Buscar registros de ingestão de água (tabela controle_hidrico)
     console.log("🔍 Chamando Lambda CONTROLES...");
-    const controleResponse = await fetch(`https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/controles/usuario/${userId}?limit=55`)
+    const controleResponse = await fetch(`https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/controles/usuario/${userId}?limit=135`)
     
     
     if (!controleResponse.ok) {
@@ -30,25 +29,36 @@ export async function GET() {
       throw new Error('Erro ao buscar dados de controle hídrico')
     }
 
-    const controles = await controleResponse.json()
+    // 🔹 Obter dados do controle
+const controles = await controleResponse.json()
+const controleItems = Array.isArray(controles)
+  ? controles
+  : controles.items || controles.content || []
 
-    // Normaliza o dia atual para YYYY-MM-DD
-    const hoje = new Date();
-    const brasilia = new Date(hoje.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    const todayDate = brasilia.toISOString().split('T')[0];
+// 🔹 Define o "hoje" local
+const now = new Date()
+const todayStart = new Date(now)
+todayStart.setHours(0, 0, 0, 0)
 
-    // Filtra apenas registros do dia atual usando `timestamp`
-    const todayControls = controles.items?.filter((c: any) => {
-      const registroDate = new Date(c.timestamp).toISOString().split('T')[0]
-      return registroDate === todayDate
-    }) ?? []
+const todayEnd = new Date(now)
+todayEnd.setHours(23, 59, 59, 999)
+console.log('Primeiro controle recebido:', controleItems[0])
+console.log('Hoje começa em:', todayStart)
+console.log('Hoje termina em:', todayEnd)
+// 🔹 Filtra os registros dentro do intervalo local
+const todayControls = controleItems.filter((c: any) => {
+  const registroDate = new Date(c.timestamp)
+  return registroDate >= todayStart && registroDate <= todayEnd
+})
 
-    // Soma ingestão de líquido (ignorando urina)
-    const todayWater = todayControls.reduce((total: number, c: any) => {
-      return total + (c.quantidadeLiquidoMl || 0)
-    }, 0)
+// 🔹 Soma a quantidade ingerida
+const todayWater = todayControls.reduce((total: number, c: any) => {
+  return total + (c.quantidadeLiquidoMl || 0)
+}, 0)
 
-    console.log('Água ingerida hoje (ml):', todayWater)
+console.log('💧 Água ingerida hoje (ml):', todayWater)
+
+
 
     // 2️⃣ Buscar registros de urina
     const urinaResponse = await fetch(`https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/controles/usuario/${userId}/urina`)
@@ -62,12 +72,12 @@ export async function GET() {
   const urinas = await urinaResponse.json()
 
   // Normaliza dia atual para 'YYYY-MM-DD'
-  const todayUrinehoje = new Date().toISOString().split('T')[0]
+  //const todayUrinehoje = new Date().toISOString().split('T')[0]
 
   // Conta registros de urina só do dia atual
   const todayUrine = urinas.items?.filter((u: any) => {
-    const registroDate = new Date(u.timestamp).toISOString().split('T')[0]
-    return registroDate === todayUrinehoje
+    const registroDate = new Date(u.timestamp)
+    return registroDate >= todayStart && registroDate <= todayEnd
   })?.length ?? 0
 
 console.log('Micções hoje:', todayUrine)
