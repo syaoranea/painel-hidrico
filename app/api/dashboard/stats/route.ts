@@ -100,6 +100,19 @@ console.log('Micções hoje:', todayUrine)
     const progress = dailyGoal > 0 ? Math.round((todayWater / dailyGoal) * 100) : 0
     const streak = progress >= 80 ? 1 : 0 // (pode evoluir depois)
 
+/*     if(progress >= 60) {
+      const metasResponse = await fetch(`https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/metas/${userId}`)
+      if(!metasResponse.ok){
+        console.error('Erro ao buscar dados de metas:', )
+        throw new Error('Erro ao buscar dados de metas')
+      }
+      const metas = metasResponse.ok ? await metasResponse.json() : null
+      if(progress >= 100){
+
+      }
+
+    } */
+
     return NextResponse.json({
       todayWater,
       todayUrine,

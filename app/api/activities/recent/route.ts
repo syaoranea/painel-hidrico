@@ -20,7 +20,7 @@ export async function GET() {
     const userId = session.user.id
 
     const [controleRes, urinaRes] = await Promise.all([
-          fetch(`${API_CONTROLE_URL}/${userId}?limit=2`),
+          fetch(`${API_CONTROLE_URL}/${userId}/ingestao/hoje`),
           fetch(`${API_URINA_URL}/${userId}/urina/hoje`)
         ])
     
@@ -38,6 +38,7 @@ export async function GET() {
         const waterIntakes = controleData.items || []   // ingestão
         const urineRecords = urinaData.items || []   
         console.log(waterIntakes, 'recebida')
+        console.log(urinaData, 'recebida')
     // 🔹 Unifica e formata exatamente como antes
     const activities = [
     ...waterIntakes.map((intake: any) => {
@@ -65,8 +66,7 @@ export async function GET() {
       })),
     ]
 
-    // 🔹 Ordena por timestamp
-    activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  console.log(activities, 'activities')
 
     // 🔹 Retorna só os 15 mais recentes
     return NextResponse.json(activities.slice(0, 15))

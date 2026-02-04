@@ -279,39 +279,7 @@ const quickAddWater = async (amount: number) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.4 }}
       >
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-600" />
-              Registro de Hidratação por Hora
-            </CardTitle>
-            <CardDescription>
-              Quantidade de água planejada ao longo do dia
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full border border-gray-200 text-sm text-gray-700">
-                <thead className="bg-blue-50">
-                  <tr>
-                    <th className="px-4 py-2 border">Hora</th>
-                    <th className="px-4 py-2 border">Quantidade (ml)</th>
-                    <th className="px-4 py-2 border">Nome Validado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from({ length: 20 }, (_, i) => (
-                    <tr key={i} className="odd:bg-white even:bg-gray-50">
-                      <td className="px-4 py-2 border text-center">{i + 5}</td>
-                      <td className="px-4 py-2 border text-center">150</td>
-                      <td className="px-4 py-2 border text-center">Validado</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        
       </motion.div>
 
       {/* Forms */}

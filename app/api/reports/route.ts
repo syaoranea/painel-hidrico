@@ -20,26 +20,28 @@ export async function GET(request: Request) {
 
     const userId = session.user.id
     const now = new Date()
-    
+    let limit = 200
     let startDate = new Date(now)
     switch (period) {
       case '7days':
         startDate.setDate(now.getDate() - 7)
+        limit = 250
         break
       case '30days':
         startDate.setDate(now.getDate() - 30)
+        limit = 550
         break
       case '90days':
         startDate.setDate(now.getDate() - 90)
+        limit = 1500
         break
       default:
         startDate.setDate(now.getDate() - 7)
     }
     startDate.setHours(0, 0, 0, 0)
 
-    // 🔹 Busca os dados no backend Java
     const [controleRes, urinaRes] = await Promise.all([
-      fetch(`${API_CONTROLE_URL}/${userId}?limit=200`),
+      fetch(`${API_CONTROLE_URL}/${userId}?limit=${limit}`),
       fetch(`${API_URINA_URL}/${userId}/urina?limit=100`)
     ])
 
@@ -95,7 +97,21 @@ export async function GET(request: Request) {
       const dayUrineFrequency = dayUrineRecords.length
 
 
-      const goalMl = 2000
+      const userResponse = await fetch(`https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/usuarios/${userId}`)
+  
+      if(!userResponse.ok){
+        console.error('Erro ao buscar dados de controle hídrico:', )
+        throw new Error('Erro ao buscar dados de controle hídrico')
+      }
+      const user = userResponse.ok ? await userResponse.json() : null
+      session.user.height = user.height
+
+      // 4️⃣ Calcular meta diária automática
+      console.log('www'+user?.weight)
+
+      const dailyGoal = calculateDailyGoal(user?.weight, user?.age, user?.activityLevel)
+
+      const goalMl = dailyGoal
       const progress = goalMl > 0 ? Math.round((dayWaterTotal / goalMl) * 100) : 0
 
       waterData.push({
@@ -202,3 +218,18 @@ export async function GET(request: Request) {
     )
   }
 }
+
+function calculateDailyGoal(weight?: number | null, age?: number | null, activityLevel?: string | null): number {
+  console.log('entrou')
+  const baseAmount = weight ? weight * 35 : 2000
+  let multiplier = 1
+  switch (activityLevel) {
+    case 'low': multiplier = 1; break
+    case 'moderate': multiplier = 1.2; break
+    case 'high': multiplier = 1.5; break
+    default: multiplier = 1.2
+  }
+  if (age && age > 60) multiplier *= 1.1
+  return Math.round(baseAmount * multiplier)
+}
+

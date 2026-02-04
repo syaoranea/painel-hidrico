@@ -11,6 +11,23 @@ import { Activity, X, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSession } from 'next-auth/react'
 import { tiposUrina } from '@/lib/tiposLiquido'
+
+// Função para obter o horário atual no formato HH:mm
+const getCurrentTime = (): string => {
+  const now = new Date()
+  const hours = now.getHours().toString().padStart(2, '0')
+  const minutes = now.getMinutes().toString().padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
+// Função para converter horário HH:mm para timestamp Unix (combinando com data atual)
+const timeToTimestamp = (time: string): number => {
+  const [hours, minutes] = time.split(':').map(Number)
+  const now = new Date()
+  now.setHours(hours, minutes, 0, 0)
+  return Math.floor(now.getTime() / 1000)
+}
+
 interface UrineRecordFormProps {
   onClose: () => void
   onSuccess: () => void
@@ -20,6 +37,7 @@ export function UrineRecordForm({ onClose, onSuccess }: UrineRecordFormProps) {
   const [volume, setVolume] = useState('')
   const [urineType, setUrineType] = useState('')
   const [notes, setNotes] = useState('')
+  const [time, setTime] = useState(getCurrentTime())
   const [isLoading, setIsLoading] = useState(false)
   const { data: session } = useSession()
 
@@ -38,7 +56,8 @@ export function UrineRecordForm({ onClose, onSuccess }: UrineRecordFormProps) {
           quantidadeUrinaMl: Number(volume),
           urineType: urineType,
           observacoes: notes,
-          usuarioId: session?.user.id     
+          usuarioId: session?.user.id,
+          timestamp: timeToTimestamp(time)
         }),
       })
 
@@ -92,7 +111,7 @@ export function UrineRecordForm({ onClose, onSuccess }: UrineRecordFormProps) {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                
+                                
                 <div className="space-y-2">
                   <Label htmlFor="volume">Volume aproximado (ml) - Opcional</Label>
                   <Input
@@ -141,6 +160,17 @@ export function UrineRecordForm({ onClose, onSuccess }: UrineRecordFormProps) {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="time">Horário</Label>
+                  <Input
+                    id="time"
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    required
+                  />
+                </div>
+
                 <div className="flex gap-2 pt-4">
                   <Button
                     type="button"
@@ -174,3 +204,4 @@ export function UrineRecordForm({ onClose, onSuccess }: UrineRecordFormProps) {
     </AnimatePresence>
   )
 }
+

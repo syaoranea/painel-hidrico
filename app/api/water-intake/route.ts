@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { quantidadeLiquidoMl, observacoes, tipoLiquidoId } = body
+    const { quantidadeLiquidoMl, observacoes, tipoLiquidoId,  timestamp } = body
 
     if (!quantidadeLiquidoMl || quantidadeLiquidoMl <= 0) {
       return NextResponse.json({ message: 'Quantidade deve ser maior que zero' }, { status: 400 })
@@ -24,10 +24,11 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        tipoLiquidoId: tipoLiquidoId || 1,
+        tipoLiquidoId: tipoLiquidoId,
         quantidadeLiquidoMl,
         observacoes: observacoes,
         usuarioId: session.user.id,
+        horario: timestamp
       }),
     })
 

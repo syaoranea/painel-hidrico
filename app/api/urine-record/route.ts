@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { quantidadeUrinaMl, urineType, observacoes, usuarioId } = body
+    const { quantidadeUrinaMl, urineType, observacoes, usuarioId, timestamp } = body
 
     if (!quantidadeUrinaMl || quantidadeUrinaMl <= 0) {
       return NextResponse.json({ message: 'Quantidade deve ser maior que zero' }, { status: 400 })
@@ -28,7 +28,8 @@ export async function POST(request: Request) {
         quantidadeUrinaMl: quantidadeUrinaMl,
         urineType: urineType,
         observacoes: observacoes,
-        usuarioId: usuarioId
+        usuarioId: usuarioId,
+        horario: timestamp
       }),
     })
 

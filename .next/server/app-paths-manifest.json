@@ -1,9 +1,3 @@
 {
-  "/auth/login/page": "app/auth/login/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/urine-record/route": "app/api/urine-record/route.js",
-  "/api/dashboard/stats/route": "app/api/dashboard/stats/route.js",
-  "/api/water-intake/route": "app/api/water-intake/route.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/dashboard/settings/page": "app/dashboard/settings/page.js"
+  "/api/reports/route": "app/api/reports/route.js"
 }

@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState } from 'react'
@@ -13,6 +12,22 @@ import { tiposLiquido } from '@/lib/tiposLiquido'
 import { useSession } from 'next-auth/react'
 import { API_BASE_URL } from '@/lib/api'
 
+// Função para obter o horário atual no formato HH:mm
+const getCurrentTime = (): string => {
+  const now = new Date()
+  const hours = now.getHours().toString().padStart(2, '0')
+  const minutes = now.getMinutes().toString().padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
+// Função para converter horário HH:mm para timestamp Unix (combinando com data atual)
+const timeToTimestamp = (time: string): number => {
+  const [hours, minutes] = time.split(':').map(Number)
+  const now = new Date()
+  now.setHours(hours, minutes, 0, 0)
+  return Math.floor(now.getTime() / 1000)
+}
+
 interface WaterIntakeFormProps {
   onClose: () => void
   onSuccess: () => void
@@ -22,6 +37,7 @@ export function WaterIntakeForm({ onClose, onSuccess }: WaterIntakeFormProps) {
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [tipoId, setTipoId] = useState("")
+  const [time, setTime] = useState(getCurrentTime())
   const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -37,7 +53,8 @@ export function WaterIntakeForm({ onClose, onSuccess }: WaterIntakeFormProps) {
           tipoLiquidoId: Number(tipoId),
           quantidadeLiquidoMl: Number(amount),
           observacoes: notes,
-          usuarioId: session?.user.id 
+          usuarioId: session?.user.id,
+          timestamp: timeToTimestamp(time)
         }),
       })
 
@@ -90,6 +107,7 @@ export function WaterIntakeForm({ onClose, onSuccess }: WaterIntakeFormProps) {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
+
                 <div className="space-y-2">
                   <Label htmlFor="amount">Quantidade (ml)</Label>
                   <Input
@@ -132,6 +150,17 @@ export function WaterIntakeForm({ onClose, onSuccess }: WaterIntakeFormProps) {
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     maxLength={100}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="time">Horário</Label>
+                  <Input
+                    id="time"
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    required
                   />
                 </div>
 
