@@ -4,8 +4,7 @@ import { authOptions } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-const API_CONTROLE_URL = 'https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/controles/usuario'
-const API_URINA_URL = 'https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/controles/usuario'
+const API_BASE = 'https://m1f21fnc50.execute-api.us-east-1.amazonaws.com'
 
 export async function GET(request: Request) {
   try {
@@ -20,196 +19,196 @@ export async function GET(request: Request) {
 
     const userId = session.user.id
     const now = new Date()
+
+    let days = 7
     let limit = 200
-    let startDate = new Date(now)
+
     switch (period) {
-      case '7days':
-        startDate.setDate(now.getDate() - 7)
-        limit = 250
-        break
       case '30days':
-        startDate.setDate(now.getDate() - 30)
+        days = 30
         limit = 550
         break
       case '90days':
-        startDate.setDate(now.getDate() - 90)
+        days = 90
         limit = 1500
         break
       default:
-        startDate.setDate(now.getDate() - 7)
+        days = 7
     }
-    startDate.setHours(0, 0, 0, 0)
 
-    const [controleRes, urinaRes] = await Promise.all([
-      fetch(`${API_CONTROLE_URL}/${userId}?limit=${limit}`),
-      fetch(`${API_URINA_URL}/${userId}/urina?limit=100`)
+    // 🔹 Data inicial EXATA do período
+    const startDate = new Date()
+    startDate.setHours(0, 0, 0, 0)
+    startDate.setDate(startDate.getDate() - (days - 1))
+
+    // 🔹 Busca paralela
+    const [controleRes, urinaRes, userRes, metasRes] = await Promise.all([
+      fetch(`${API_BASE}/controles/usuario/${userId}?limit=${limit}`),
+      fetch(`${API_BASE}/controles/usuario/${userId}/urina?limit=${limit}`),
+      fetch(`${API_BASE}/usuarios/${userId}`),
+      fetch(`${API_BASE}/metas/${userId}`)
     ])
 
-    if (!controleRes.ok || !urinaRes.ok) {
+    if (!controleRes.ok || !urinaRes.ok || !userRes.ok || !metasRes.ok) {
       return NextResponse.json(
-        { message: 'Erro ao buscar dados no servidor Java' },
+        { message: 'Erro ao buscar dados no servidor' },
         { status: 500 }
       )
     }
 
     const controleData = await controleRes.json()
     const urinaData = await urinaRes.json()
+    const user = await userRes.json()
+    const metas = await metasRes.json()
 
-    // 🔹 Ajuste os dados recebidos (Spring retorna com "content" se for Page)
-    const waterIntakes = controleData.items || []   // ingestão
-    const urineRecords = urinaData.items || []   
+    const waterIntakes = controleData.items || []
+    const urineRecords = urinaData.items || []
 
-    // 🔹 Processa por dia
-    const days = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+    // 🔹 Filtrar registros dentro do período
+    const filteredWater = waterIntakes.filter((i: any) => {
+      const d = new Date(i.timestamp)
+      return d >= startDate && d <= now
+    })
+
+    const filteredUrine = urineRecords.filter((i: any) => {
+      const d = new Date(i.timestamp)
+      return d >= startDate && d <= now
+    })
+
     const waterData = []
     const urineDataProcessed = []
     const progressData = []
 
+    const dailyGoal = calculateDailyGoal(user?.weight, user?.age, user?.activityLevel)
+
+    // 🔹 Loop de dias
     for (let i = 0; i < days; i++) {
       const date = new Date(startDate)
       date.setDate(startDate.getDate() + i)
-      const dateStr = date.toISOString().split('T')[0]
 
       const nextDay = new Date(date)
       nextDay.setDate(date.getDate() + 1)
 
-      // 💧 Água
-      const dayWaterIntakes = waterIntakes.filter((intake: any) => {
-        const intakeDate = new Date(intake.timestamp)
-        return intakeDate >= date && intakeDate < nextDay
-      })
+      const dateStr = date.toISOString().split('T')[0]
 
-      const dayWaterTotal = dayWaterIntakes.reduce(
-        (sum: number, intake: any) => sum + (intake.quantidadeLiquidoMl || 0),
-        0
-      )
+      // 💧 Água do dia
+      const dayWater = filteredWater
+        .filter((w: any) => {
+          const d = new Date(w.timestamp)
+          return d >= date && d < nextDay
+        })
+        .reduce((s: number, w: any) => s + (w.quantidadeLiquidoMl || 0), 0)
 
-      // 🚽 Urina
-      const dayUrineRecords = urineRecords.filter((record: any) => {
-        const recordDate = new Date(record.timestamp)
-        return recordDate >= date && recordDate < nextDay
+      // 🚽 Urina do dia
+      const dayUrineRecords = filteredUrine.filter((u: any) => {
+        const d = new Date(u.timestamp)
+        return d >= date && d < nextDay
       })
 
       const dayUrineVolume = dayUrineRecords.reduce(
-        (sum: number, record: any) => sum + (record.quantidadeUrinaMl || 0),
+        (s: number, u: any) => s + (u.quantidadeUrinaMl || 0),
         0
       )
+
       const dayUrineFrequency = dayUrineRecords.length
 
+      const progress =
+        dailyGoal > 0 ? Math.round((dayWater / dailyGoal) * 100) : 0
 
-      const userResponse = await fetch(`https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/usuarios/${userId}`)
-  
-      if(!userResponse.ok){
-        console.error('Erro ao buscar dados de controle hídrico:', )
-        throw new Error('Erro ao buscar dados de controle hídrico')
-      }
-      const user = userResponse.ok ? await userResponse.json() : null
-      session.user.height = user.height
-
-      // 4️⃣ Calcular meta diária automática
-      console.log('www'+user?.weight)
-
-      const dailyGoal = calculateDailyGoal(user?.weight, user?.age, user?.activityLevel)
-
-      const goalMl = dailyGoal
-      const progress = goalMl > 0 ? Math.round((dayWaterTotal / goalMl) * 100) : 0
-
-      waterData.push({
-        date: dateStr,
-        water: dayWaterTotal,
-        goal: goalMl,
-      })
-
+      waterData.push({ date: dateStr, water: dayWater, goal: dailyGoal })
       urineDataProcessed.push({
         date: dateStr,
         frequency: dayUrineFrequency,
-        volume: dayUrineVolume,
+        volume: dayUrineVolume
       })
-
       progressData.push({
         date: dateStr,
         progress: Math.min(progress, 150),
-        streak: 0,
+        streak: 0
       })
     }
 
-    // 🔹 Calcula streaks
+    // 🔹 Streaks
     let currentStreak = 0
     let longestStreak = 0
-    let tempStreak = 0
+    let currentStreakData = 0
+    let longestStreakData = 0
+    let temp = 0
 
     for (let i = progressData.length - 1; i >= 0; i--) {
       if (progressData[i].progress >= 80) {
-        tempStreak++
-        if (i === progressData.length - 1) currentStreak = tempStreak
+        temp++
+        if (i === progressData.length - 1) currentStreak = temp
       } else {
-        longestStreak = Math.max(longestStreak, tempStreak)
-        tempStreak = 0
+        longestStreak = Math.max(longestStreak, temp)
+        temp = 0
       }
-      progressData[i].streak = tempStreak
+      progressData[i].streak = temp
     }
-    longestStreak = Math.max(longestStreak, tempStreak)
+    longestStreak = Math.max(longestStreak, temp)
 
-    // 🔹 Estatísticas gerais
-    const totalWater = waterIntakes.reduce(
-      (sum: number, intake: any) => sum + (intake.quantidadeLiquidoMl || 0),
+    // 🔹 Estatísticas corretas do período
+    const totalWater = filteredWater.reduce(
+      (s: number, w: any) => s + (w.quantidadeLiquidoMl || 0),
       0
     )
-    const averageDaily = Math.round(totalWater / Math.max(days, 1))
-    const goalsAchieved = progressData.filter(day => day.progress >= 100).length
-    const goalAchievement = Math.round((goalsAchieved / days) * 100)
-    const totalUrineRecords = urineRecords.length
-    const averageUrineFrequency = Math.round(totalUrineRecords / Math.max(days, 1))
 
-    // 🔹 Gera insights
+    const averageDaily = Math.round(totalWater / days)
+
+    const goalsAchieved = progressData.filter(d => d.progress >= 100).length
+    const goalAchievement = Math.round((goalsAchieved / days) * 100)
+
+    const totalUrineRecords = filteredUrine.length
+    const averageUrineFrequency = Math.round(totalUrineRecords / days)
+
     const insights = []
 
-    if (averageDaily < 2000) {
+    if (averageDaily < dailyGoal) {
       insights.push({
         title: 'Hidratação Insuficiente',
-        description: `Sua média diária de ${averageDaily}ml está abaixo da recomendação mínima.`,
+        description: `Sua média diária de ${averageDaily}ml está abaixo da recomendação mínima.`
       })
     }
 
     if (goalAchievement < 70) {
       insights.push({
         title: 'Foque nas Metas',
-        description: `Você atingiu apenas ${goalAchievement}% das metas.`,
+        description: `Você atingiu apenas ${goalAchievement}% das metas.`
       })
     }
 
     if (currentStreak >= 7) {
       insights.push({
         title: 'Excelente Consistência!',
-        description: `Você mantém uma sequência de ${currentStreak} dias.`,
+        description: `Você mantém uma sequência de ${currentStreak} dias.`
       })
     }
 
     if (averageUrineFrequency < 4) {
       insights.push({
         title: 'Frequência Baixa',
-        description: 'Sua frequência de eliminação parece baixa — pode indicar desidratação.',
+        description:
+          'Sua frequência de eliminação parece baixa — pode indicar desidratação.'
       })
     }
 
-    const overview = {
-      totalWater,
-      averageDaily,
-      goalAchievement,
-      longestStreak,
-      currentStreak,
-      totalUrineRecords,
-      averageUrineFrequency,
-    }
-
     return NextResponse.json({
-      overview,
+      overview: {
+        totalWater,
+        averageDaily,
+        goalAchievement,
+        longestStreak,
+        currentStreak,
+        currentStreakData,
+        longestStreakData,
+        totalUrineRecords,
+        averageUrineFrequency
+      },
       waterData,
       urineData: urineDataProcessed,
       progressData,
-      insights,
+      insights
     })
-
   } catch (error) {
     console.error('Reports error:', error)
     return NextResponse.json(
@@ -219,17 +218,18 @@ export async function GET(request: Request) {
   }
 }
 
-function calculateDailyGoal(weight?: number | null, age?: number | null, activityLevel?: string | null): number {
-  console.log('entrou')
-  const baseAmount = weight ? weight * 35 : 2000
-  let multiplier = 1
-  switch (activityLevel) {
-    case 'low': multiplier = 1; break
-    case 'moderate': multiplier = 1.2; break
-    case 'high': multiplier = 1.5; break
-    default: multiplier = 1.2
-  }
-  if (age && age > 60) multiplier *= 1.1
-  return Math.round(baseAmount * multiplier)
-}
+function calculateDailyGoal(
+  weight?: number | null,
+  age?: number | null,
+  activityLevel?: string | null
+): number {
+  const base = weight ? weight * 35 : 2000
 
+  let mult = 1.2
+  if (activityLevel === 'high') mult = 1.5
+  if (activityLevel === 'low') mult = 1
+
+  if (age && age > 60) mult *= 1.1
+
+  return Math.round(base * mult)
+}
