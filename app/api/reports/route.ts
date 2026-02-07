@@ -49,6 +49,13 @@ export async function GET(request: Request) {
       fetch(`${API_BASE}/metas/${userId}`)
     ])
 
+    console.log('STATUS:',
+      controleRes.status,
+      urinaRes.status,
+      userRes.status,
+      metasRes.status
+    )
+
     if (!controleRes.ok || !urinaRes.ok || !userRes.ok || !metasRes.ok) {
       return NextResponse.json(
         { message: 'Erro ao buscar dados no servidor' },
@@ -59,7 +66,8 @@ export async function GET(request: Request) {
     const controleData = await controleRes.json()
     const urinaData = await urinaRes.json()
     const user = await userRes.json()
-    const metas = await metasRes.json()
+    const metasResponse = await metasRes.json()
+    const metas = metasResponse.items?.[0] ?? {}
 
     const waterIntakes = controleData.items || []
     const urineRecords = urinaData.items || []
@@ -129,23 +137,11 @@ export async function GET(request: Request) {
     }
 
     // 🔹 Streaks
-    let currentStreak = 0
-    let longestStreak = 0
-    let currentStreakData = 0
-    let longestStreakData = 0
-    let temp = 0
-
-    for (let i = progressData.length - 1; i >= 0; i--) {
-      if (progressData[i].progress >= 80) {
-        temp++
-        if (i === progressData.length - 1) currentStreak = temp
-      } else {
-        longestStreak = Math.max(longestStreak, temp)
-        temp = 0
-      }
-      progressData[i].streak = temp
-    }
-    longestStreak = Math.max(longestStreak, temp)
+    let currentStreak = metas.currentStreak
+    let longestStreak = metas.longestStreak
+    let currentStreakData = metas.currentStreakData
+    let longestStreakData = metas.longestStreakData
+    console.log(metas)
 
     // 🔹 Estatísticas corretas do período
     const totalWater = filteredWater.reduce(

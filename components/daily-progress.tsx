@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -10,10 +9,12 @@ interface DailyProgressProps {
   current: number
   goal: number
   progress: number
+  userId: string | undefined
 }
 
-export function DailyProgress({ current, goal, progress }: DailyProgressProps) {
+export function DailyProgress({ current, goal, progress, userId }: DailyProgressProps) {
   const [animatedProgress, setAnimatedProgress] = useState(0)
+  const [statusMessage, setStatusMessage] = useState('')
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -23,20 +24,34 @@ export function DailyProgress({ current, goal, progress }: DailyProgressProps) {
     return () => clearTimeout(timer)
   }, [progress])
 
-  const getProgressColor = (progress: number) => {
-    if (progress < 30) return 'from-red-500 to-red-400'
-    if (progress < 60) return 'from-yellow-500 to-yellow-400'
-    if (progress < 90) return 'from-blue-500 to-blue-400'
-    return 'from-green-500 to-green-400'
-  }
+  // 🔹 Define mensagem síncrona
+  useEffect(() => {
+    if (progress < 30) return setStatusMessage('Você precisa beber mais água!')
+    if (progress < 60) return setStatusMessage('Está indo bem, continue!')
+    if (progress < 90) return setStatusMessage('Quase lá! Continue hidratando')
+    if (progress < 100) return setStatusMessage('Quase atingindo sua meta!')
 
-  const getStatusMessage = (progress: number) => {
-    if (progress < 30) return 'Você precisa beber mais água!'
-    if (progress < 60) return 'Está indo bem, continue!'
-    if (progress < 90) return 'Quase lá! Continue hidratando'
-    if (progress < 100) return 'Quase atingindo sua meta!'
-    return 'Parabéns! Meta atingida! 🎉'
-  }
+    setStatusMessage('Parabéns! Meta atingida! 🎉')
+
+    // 🔥 Chamada async só quando atingir 100%
+    if (progress >= 100 && userId) {
+      fetch('/api/metas', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentStreak: 1,
+          currentStreakData: 0,
+          userId,
+          type: 'currentStreak'
+        }),
+      })
+        .then(res => {
+          if (res.ok) console.log("Registro salvo com sucesso! metas")
+          else console.log("Erro ao salvar registro metas")
+        })
+        .catch(err => console.error('Erro ao registrar meta:', err))
+    }
+  }, [progress, userId])
 
   const remaining = Math.max(goal - current, 0)
 
@@ -48,11 +63,11 @@ export function DailyProgress({ current, goal, progress }: DailyProgressProps) {
           Progresso Diário
         </CardTitle>
       </CardHeader>
+
       <CardContent className="space-y-6">
         {/* Progress Ring */}
         <div className="relative mx-auto w-40 h-40">
           <svg className="w-40 h-40 transform -rotate-90">
-            {/* Background circle */}
             <circle
               cx="80"
               cy="80"
@@ -62,7 +77,7 @@ export function DailyProgress({ current, goal, progress }: DailyProgressProps) {
               fill="transparent"
               className="text-gray-200"
             />
-            {/* Progress circle */}
+
             <motion.circle
               cx="80"
               cy="80"
@@ -72,11 +87,10 @@ export function DailyProgress({ current, goal, progress }: DailyProgressProps) {
               fill="transparent"
               strokeLinecap="round"
               initial={{ strokeDasharray: "0 440" }}
-              animate={{ 
-                strokeDasharray: `${(animatedProgress * 440) / 100} 440`
-              }}
+              animate={{ strokeDasharray: `${(animatedProgress * 440) / 100} 440` }}
               transition={{ duration: 1.5, ease: "easeOut" }}
             />
+
             <defs>
               <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" className="stop-blue-500" />
@@ -84,8 +98,7 @@ export function DailyProgress({ current, goal, progress }: DailyProgressProps) {
               </linearGradient>
             </defs>
           </svg>
-          
-          {/* Center content */}
+
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <motion.div
               initial={{ scale: 0 }}
@@ -111,8 +124,9 @@ export function DailyProgress({ current, goal, progress }: DailyProgressProps) {
           className="text-center"
         >
           <p className="text-sm font-medium text-gray-700">
-            {getStatusMessage(progress)}
+            {statusMessage}
           </p>
+
           {remaining > 0 && (
             <p className="text-xs text-muted-foreground mt-1">
               Faltam {remaining}ml para atingir sua meta
@@ -120,7 +134,7 @@ export function DailyProgress({ current, goal, progress }: DailyProgressProps) {
           )}
         </motion.div>
 
-        {/* Progress Stats */}
+        {/* Stats */}
         <div className="grid grid-cols-2 gap-4 pt-4 border-t">
           <div className="text-center">
             <div className="flex items-center justify-center gap-1 text-blue-600 mb-1">
@@ -129,6 +143,7 @@ export function DailyProgress({ current, goal, progress }: DailyProgressProps) {
             </div>
             <div className="text-lg font-bold">{current}ml</div>
           </div>
+
           <div className="text-center">
             <div className="flex items-center justify-center gap-1 text-green-600 mb-1">
               <TrendingUp className="h-4 w-4" />

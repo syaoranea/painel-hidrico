@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
+const API_BASE = 'https://m1f21fnc50.execute-api.us-east-1.amazonaws.com'
+
 export async function GET() {
   console.log('entrou')
   try {
@@ -21,7 +23,23 @@ export async function GET() {
     // 1️⃣ Buscar registros de ingestão de água (tabela controle_hidrico)
     console.log("🔍 Chamando Lambda CONTROLES...");
     const controleResponse = await fetch(`https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/controles/usuario/${userId}?limit=135`)
-    
+    const [metasRes] = await Promise.all([
+      fetch(`${API_BASE}/metas/${userId}`)
+    ])
+
+    console.log('STATUS:',
+      metasRes.status
+    )
+
+    if (!metasRes.ok) {
+      return NextResponse.json(
+        { message: 'Erro ao buscar dados no servidor' },
+        { status: 500 }
+      )
+    }
+
+    const metasResponse = await metasRes.json()
+    const metas = metasResponse.items?.[0] ?? {}
     
     if (!controleResponse.ok) {
       const errorText = await controleResponse.text()
@@ -40,11 +58,11 @@ const now = new Date()
 const todayStart = new Date(now)
 todayStart.setHours(0, 0, 0, 0)
 
+
+
 const todayEnd = new Date(now)
 todayEnd.setHours(23, 59, 59, 999)
-console.log('Primeiro controle recebido:', controleItems[0])
-console.log('Hoje começa em:', todayStart)
-console.log('Hoje termina em:', todayEnd)
+
 // 🔹 Filtra os registros dentro do intervalo local
 const todayControls = controleItems.filter((c: any) => {
   const registroDate = new Date(c.timestamp)
@@ -60,13 +78,13 @@ console.log('💧 Água ingerida hoje (ml):', todayWater)
 
 
 
-    // 2️⃣ Buscar registros de urina
-    const urinaResponse = await fetch(`https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/controles/usuario/${userId}/urina`)
-    
-      if (!urinaResponse.ok) {
-    const errorText = await urinaResponse.text()
-    console.error('Erro ao buscar dados de urina:', errorText)
-    throw new Error('Erro ao buscar dados de urina')
+  // 2️⃣ Buscar registros de urina
+  const urinaResponse = await fetch(`https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/controles/usuario/${userId}/urina`)
+  
+    if (!urinaResponse.ok) {
+  const errorText = await urinaResponse.text()
+  console.error('Erro ao buscar dados de urina:', errorText)
+  throw new Error('Erro ao buscar dados de urina')
   }
 
   const urinas = await urinaResponse.json()
@@ -80,7 +98,7 @@ console.log('💧 Água ingerida hoje (ml):', todayWater)
     return registroDate >= todayStart && registroDate <= todayEnd
   })?.length ?? 0
 
-console.log('Micções hoje:', todayUrine)
+  console.log('Micções hoje:', todayUrine)
     // 3️⃣ Buscar dados do usuário (para meta diária)
     const userResponse = await fetch(`https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/usuarios/${userId}`)
   
@@ -98,20 +116,9 @@ console.log('Micções hoje:', todayUrine)
 
     // 5️⃣ Calcular progresso e sequência
     const progress = dailyGoal > 0 ? Math.round((todayWater / dailyGoal) * 100) : 0
-    const streak = progress >= 80 ? 1 : 0 // (pode evoluir depois)
+    const streak = metas.currentStreak
 
-/*     if(progress >= 60) {
-      const metasResponse = await fetch(`https://m1f21fnc50.execute-api.us-east-1.amazonaws.com/metas/${userId}`)
-      if(!metasResponse.ok){
-        console.error('Erro ao buscar dados de metas:', )
-        throw new Error('Erro ao buscar dados de metas')
-      }
-      const metas = metasResponse.ok ? await metasResponse.json() : null
-      if(progress >= 100){
 
-      }
-
-    } */
 
     return NextResponse.json({
       todayWater,

@@ -107,22 +107,6 @@ export function ReportsClient() {
               <SelectItem value="90days">Últimos 90 dias</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            variant="outline"
-            onClick={() => handleExport('csv')}
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            CSV
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => handleExport('pdf')}
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            PDF
-          </Button>
         </div>
       </motion.div>
 

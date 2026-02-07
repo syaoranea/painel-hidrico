@@ -69,6 +69,29 @@ export function DashboardClient() {
       const response = await fetch('/api/dashboard/stats')
       if (response.ok) {
         const data = await response.json()
+        if (data.todayUrine === 1  ){
+          try {
+            const responseMetas = await fetch('/api/metas', {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                currentStreakData: 1,
+                currentStreak: 0,
+                userId: session?.user.id,
+                type: 'currentStreakData'
+              }),
+              
+            })
+            if (responseMetas.ok) {
+                console.log("Registro salvo com sucesso! metas")
+              } else {
+                toast.error("Erro ao salvar registro metas")
+              }
+            } catch (error) {
+              console.error('Erro ao registrar meta:', error)
+            }
+        }
+        
         setStats(data)
       }
     } catch (error) {
@@ -94,7 +117,7 @@ const quickAddWater = async (amount: number) => {
         body: JSON.stringify({
           tipoLiquidoId: 1,
           quantidadeLiquidoMl: Number(amount),
-          usuarioId: session?.user.id 
+          userId: session?.user.id 
         }),
       })
 
@@ -270,6 +293,7 @@ const quickAddWater = async (amount: number) => {
           current={stats?.todayWater || 0}
           goal={stats?.dailyGoal || 0}
           progress={stats?.progress || 0}
+          userId={session?.user.id }
         />
         <RecentActivity onRefresh={fetchStats} />
       </motion.div>

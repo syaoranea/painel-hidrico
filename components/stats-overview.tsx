@@ -1,4 +1,3 @@
-
 'use client'
 
 import { motion } from 'framer-motion'
@@ -12,6 +11,8 @@ interface StatsOverviewProps {
     goalAchievement?: number
     longestStreak?: number
     currentStreak?: number
+    longestStreakData?: number
+    currentStreakData?: number
     totalUrineRecords?: number
     averageUrineFrequency?: number
     improvementTrend?: number
@@ -19,8 +20,32 @@ interface StatsOverviewProps {
   period: string
 }
 
+// 🔹 Tipagem dos cards
+
+type DefaultStat = {
+  title: string
+  value: string
+  subtitle: string
+  icon: any
+  color: string
+  bgColor: string
+  custom?: false
+}
+
+type StreakStat = {
+  title: string
+  custom: true
+  current: number
+  longest: number
+  icon: any
+  color: string
+  bgColor: string
+}
+
+type StatItem = DefaultStat | StreakStat
+
 export function StatsOverview({ data, period }: StatsOverviewProps) {
-  const stats = [
+  const stats: StatItem[] = [
     {
       title: 'Total Consumido',
       value: `${data?.totalWater || 0}ml`,
@@ -45,22 +70,29 @@ export function StatsOverview({ data, period }: StatsOverviewProps) {
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
     },
+
+    // 🔥 Card especial de streak (metas)
     {
-      title: 'Melhor Sequência',
-      value: `${data?.longestStreak || 0}`,
-      subtitle: 'Dias consecutivos',
+      title: 'Sequência de Metas',
+      custom: true,
+      current: data?.currentStreak || 0,
+      longest: data?.longestStreak || 0,
       icon: TrendingUp,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
     },
+
+    // 🔥 Card especial de streak (dados)
     {
-      title: 'Sequência Atual',
-      value: `${data?.currentStreak || 0}`,
-      subtitle: 'Dias seguidos',
-      icon: Award,
+      title: 'Sequência de Dados',
+      custom: true,
+      current: data?.currentStreakData || 0,
+      longest: data?.longestStreakData || 0,
+      icon: TrendingUp,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50',
     },
+
     {
       title: 'Eliminações',
       value: `${data?.totalUrineRecords || 0}`,
@@ -73,9 +105,11 @@ export function StatsOverview({ data, period }: StatsOverviewProps) {
 
   const getTrendIcon = (trend?: number) => {
     if (!trend) return null
-    return trend > 0 ? 
-      <TrendingUp className="h-4 w-4 text-green-600" /> : 
+    return trend > 0 ? (
+      <TrendingUp className="h-4 w-4 text-green-600" />
+    ) : (
       <TrendingDown className="h-4 w-4 text-red-600" />
+    )
   }
 
   const getTrendText = (trend?: number) => {
@@ -96,24 +130,52 @@ export function StatsOverview({ data, period }: StatsOverviewProps) {
         >
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.title}
-              </CardTitle>
-              <div className={`w-10 h-10 rounded-full ${stat.bgColor} flex items-center justify-center`}>
+              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+              <div
+                className={`w-10 h-10 rounded-full ${stat.bgColor} flex items-center justify-center`}
+              >
                 <stat.icon className={`h-5 w-5 ${stat.color}`} />
               </div>
             </CardHeader>
+
             <CardContent>
-              <div className={`text-2xl font-bold ${stat.color} mb-1`}>
-                {stat.value}
-              </div>
-              <p className="text-xs text-muted-foreground mb-2">
-                {stat.subtitle}
-              </p>
+              {'custom' in stat && stat.custom ? (
+                <div className="flex items-end justify-between">
+                  {/* Current */}
+                  <div>
+                    <div className={`text-2xl font-bold ${stat.color}`}>
+                      {stat.current}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Sequência atual</p>
+                  </div>
+
+                  {/* Longest */}
+                  <div className="text-right">
+                    <div className="text-sm font-semibold text-muted-foreground">
+                      {stat.longest}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Melhor sequência
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className={`text-2xl font-bold ${stat.color} mb-1`}>
+                    {stat.value}
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">{stat.subtitle}</p>
+                </>
+              )}
+
               {data?.improvementTrend !== undefined && index === 0 && (
                 <div className="flex items-center gap-1 text-xs">
                   {getTrendIcon(data.improvementTrend)}
-                  <span className={data.improvementTrend > 0 ? 'text-green-600' : 'text-red-600'}>
+                  <span
+                    className={
+                      data.improvementTrend > 0 ? 'text-green-600' : 'text-red-600'
+                    }
+                  >
                     {getTrendText(data.improvementTrend)}
                   </span>
                 </div>
@@ -125,3 +187,4 @@ export function StatsOverview({ data, period }: StatsOverviewProps) {
     </div>
   )
 }
+
